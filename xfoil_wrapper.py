@@ -5,7 +5,7 @@ import tempfile
 import os
 
 class XFoil:
-    def __init__(self, airfoil_file, reynolds = 1e5, mach=0.0):
+    def __init__(self, airfoil_file, reynolds = 4e5, mach=0.0):
         self.xfoil_path = 'xfoil'
         self.airfoil_file = airfoil_file
         self.reynolds = reynolds
@@ -19,11 +19,12 @@ class XFoil:
             '',
             '',
             'OPER',
-            #f'RE {self.reynolds}'
+            f'VISC {self.reynolds}',
             'PACC',
             'polar.txt',
             '',
             f'ASEQ {alpha_start} {alpha_end} {alpha_step}',
+            '',
             'QUIT'
         ]
         stdout, stderr = self._run_commands(commands)
@@ -34,7 +35,8 @@ class XFoil:
             input_file = os.path.join(tmpdir, 'input.in')
             with open(input_file, 'w') as f:
                 f.write('\n'.join(commands))
-            
+                print('\n'.join(commands))
+
             result = subprocess.run(
                 [self.xfoil_path],
                 stdin=open(input_file, 'r'),
@@ -62,3 +64,16 @@ plt.xlabel('Alpha')
 plt.ylabel('CL')
 plt.grid()
 plt.show()
+
+'''
+
+
+VELOCIDADE ANGULAR 
+
+tangencial = omega * r
+axial = 
+
+ESTIMAR ANGULO DE INCIDENCIA EM CADA POSIÇÃO
+
+
+'''
