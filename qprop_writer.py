@@ -2,8 +2,9 @@ from geometry_reader import read_apc_geometry
 from xfoil_wrapper import XFoil, fit_qprop_parameters 
 import numpy as np
 from scipy.interpolate import PchipInterpolator
+from tabulate import tabulate
 
-def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=10, n_interp=20, mode="nonuniform"):
+def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=10, n_interp=30, mode="nonuniform"):
 
     """
     Creates a QProp propeller input file by selecting points from a geometry file,
@@ -71,6 +72,9 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
     CLCD0 = []
     REref = []
     REexp = []
+
+    rows = []
+
     for i in range(n_interp):
         ri = xi[i]
         if (ri < trans1 ): frac = 0
@@ -78,8 +82,21 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
         else:  frac = (ri - trans1) / (trans2 - trans1)
         
         Vt = 2*np.pi*n*(ri/39.37)
+        gamma = np.arctan(V / Vt)
+        alpha_eff = yi_twist[i] - gamma
         reynolds = 1.225 / 1.78e-5 * (yi_chord[i]/39.37) * np.sqrt(V**2 + Vt**2)
         reynolds = max(reynolds, 10000)
+
+        rows.append([
+            f"{ri:.2f}",
+            f"{yi_chord[i]:.2f}",
+            f"{yi_twist[i]:.2f}",
+            f"{alpha_eff:.1f}",
+            f"{gamma:.1f}",
+            f"{reynolds:.0f}",
+            f"{frac:.2f}"
+        ])
+        headers = ["Radial", "Chord", "Twist", "Alpha_eff", "Gamma", "Re", "Interp"]
 
         results = xfoil.inte(frac, alpha_start=-12, alpha_end=12, alpha_step=0.5, reynolds = reynolds)
         data = fit_qprop_parameters(results, reynolds = reynolds, reexp=-0.5)
@@ -93,6 +110,8 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
         CLCD0.append(data['CLCD0'])
         REref.append(data['REref'])  
         REexp.append(data['REexp'])   
+
+    print(tabulate(rows, headers=headers, tablefmt="pretty"))
 
     header_parts = [
     f"{input_file}",
@@ -118,10 +137,9 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
                 f"\n {ri:.2f}  {ci:.2f}  {bi:.1f}  {CL0i:.2f}  {CL_ai:.1f}  {CL_mini:.1f}  {CL_maxi:.1f}  "
                 f"{CDOi:.3f}  {CD2ui:.3f}  {CD2li:.3f}  {CLCD0i:.2f}  {RErefi:.0e}  {REexpi:.1f}" )
     print(f"Qprop propeller input file '{output_file}' created suscessfuly from {input_file} file")
-
 '''
     TEST RUNS
 '''
 
-generate_qprop_input("APC/10x45MR-PERF.PE0", "apc_prop", rpm = 10000, thrust = 1)
+generate_qprop_input("APC/10x45MR-PERF.PE0", "apc_prop",vel=100, rpm = 10000, thrust = 1)
 

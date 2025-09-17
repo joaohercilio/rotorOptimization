@@ -59,7 +59,7 @@ class XFoil:
             input_file = os.path.join(tmpdir, 'input.in')
             with open(input_file, 'w') as f:
                 f.write('\n'.join(commands))
-                print('\n'.join(commands))
+                #print('\n'.join(commands))
 
             result = subprocess.run(
                 [self.xfoil_path],
