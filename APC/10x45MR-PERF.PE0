@@ -103,8 +103,8 @@ Simulation Date: 09/22/2022
 
        ----- AIRFOIL SECTIONS -----
 
- AIRFOIL1:  2.85, E63         (Transition Start, Airfoil 1)
- AIRFOIL2:  4.65, APC12       (Transition End, Airfoil 2)
+ AIRFOIL1:  2.85, NACA0012         (Transition Start, Airfoil 1)
+ AIRFOIL2:  4.65, NACA2412       (Transition End, Airfoil 2)
 
  AIRFOILS ARE SCALED BASED ON THICKNESS RATIO IN TABLE ABOVE.
 

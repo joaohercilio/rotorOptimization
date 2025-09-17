@@ -1,8 +1,9 @@
 from geometry_reader import read_apc_geometry
+from xfoil_wrapper import XFoil, fit_qprop_parameters 
 import numpy as np
 from scipy.interpolate import PchipInterpolator
 
-def generate_qprop_input(input_file, output_file, n_ctrl=10, n_interp=50, mode="nonuniform"):
+def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=10, n_interp=20, mode="nonuniform"):
 
     """
     Creates a QProp propeller input file by selecting points from a geometry file,
@@ -17,6 +18,15 @@ def generate_qprop_input(input_file, output_file, n_ctrl=10, n_interp=50, mode="
     output_file: str
         Path to QProp geometry file
 
+    rpm: int
+        Rotational Speed
+
+    thrust: double
+        Thrust 
+
+    vel: double
+        Speed
+
     n_ctrl : int
         Number of control points that shall be selected from the geometry file
     
@@ -27,7 +37,7 @@ def generate_qprop_input(input_file, output_file, n_ctrl=10, n_interp=50, mode="
         Chooses whether the selected points in the geometry file are picked 
         uniformly ("uniform") or non-uniformly ("nonuniform").
     """
-
+    
     radius, chord, twist, airfoils = read_apc_geometry(input_file, n_ctrl, mode=mode)
     
     xp = np.array(radius , dtype = np.float64)
@@ -41,31 +51,77 @@ def generate_qprop_input(input_file, output_file, n_ctrl=10, n_interp=50, mode="
 
     yi_chord = interp_chord(xi)
     yi_twist = interp_twist(xi)
+    
+    n = rpm / (2*np.pi)
+    D = 2*radius[-1]/39.37
+    adv_ratio  = vel / ( n * D )
+    V = n * D * adv_ratio
 
-    header = f"""
-{input_file}  
- 2           ! Nblades
-    
- 0.50  5.8   ! CL0     CL_a
- -0.3  1.2   ! CLmin   CLmax
-    
- 0.028  0.050  0.5   !  CD0    CD2    CLCD0
- 70000   -0.7        !  REref  REexp
-    
- 0.0254  0.0254   1.0  !  Rfac   Cfac   Bfac  
- 0.0     0.0      0.0  !  Radd   Cadd   Badd  
-    
-#  r  chord  beta  CL0  CL_a  CLmin CLmax  CD0   CD2u   CD2l   CLCD0  REref  REexp"""
+    xfoil = XFoil(f'airfoils/{airfoils[0][1]}', f'airfoils/{airfoils[1][1]}')
+    trans1 = airfoils[0][0]  
+    trans2 = airfoils[1][0]
 
+    CL0 = []
+    CL_a = []
+    CL_min = []
+    CL_max = []
+    CD0 = []
+    CD2u = []
+    CD2l = []
+    CLCD0 = []
+    REref = []
+    REexp = []
+    for i in range(n_interp):
+        ri = xi[i]
+        if (ri < trans1 ): frac = 0
+        elif (ri > trans2 ): frac = 1
+        else:  frac = (ri - trans1) / (trans2 - trans1)
+        
+        Vt = 2*np.pi*n*(ri/39.37)
+        reynolds = 1.225 / 1.78e-5 * (yi_chord[i]/39.37) * np.sqrt(V**2 + Vt**2)
+        reynolds = max(reynolds, 10000)
+
+        results = xfoil.inte(frac, alpha_start=-12, alpha_end=12, alpha_step=0.5, reynolds = reynolds)
+        data = fit_qprop_parameters(results, reynolds = reynolds, reexp=-0.5)
+        CL0.append(data['CL0'])
+        CL_a.append(data['CL_a'])
+        CL_min.append(data['CLmin'])
+        CL_max.append(data['CLmax'])
+        CD0.append(data['CD0'])
+        CD2u.append(data['CD2u'])
+        CD2l.append(data['CD2l'])
+        CLCD0.append(data['CLCD0'])
+        REref.append(data['REref'])  
+        REexp.append(data['REexp'])   
+
+    header_parts = [
+    f"{input_file}",
+    " 2           ! Nblades",
+    "",
+    f" {CL0[0]:.2f}    {CL_a[0]:.1f}   ! CL0     CL_a",
+    f" {CL_min[0]:.1f} {CL_max[0]:.1f} ! CLmin   CLmax",
+    "",
+    f" {CD0[0]:.3f}  {CD2u[0]:.3f}  {CLCD0[0]:.2f}   ! CD0    CD2    CLCD0",
+    " 70000  -0.7          ! REref  REexp",
+    "",
+    " 0.0254  0.0254  1.0  ! Rfac   Cfac   Bfac",
+    " 0.0     0.0     0.0  ! Radd   Cadd   Badd",
+    "",
+    "# r  chord  beta  CL0  CL_a  CLmin CLmax  CD0   CD2u   CD2l   CLCD0  REref  REexp"
+    ]
+
+    header = "\n".join(header_parts)
     with open(output_file, "w") as f:
         f.write(header)
-        for ri, ci, bi in zip(xi, yi_chord, yi_twist):
-            f.write(f"\n{ri}  {ci}  {bi}")
-    
+        for ri, ci, bi, CL0i, CL_ai, CL_mini, CL_maxi, CDOi, CD2ui, CD2li, CLCD0i, RErefi, REexpi in zip(xi, yi_chord, yi_twist, CL0, CL_a, CL_min, CL_max, CD0, CD2u, CD2l, CLCD0, REref, REexp):
+            f.write(
+                f"\n {ri:.2f}  {ci:.2f}  {bi:.1f}  {CL0i:.2f}  {CL_ai:.1f}  {CL_mini:.1f}  {CL_maxi:.1f}  "
+                f"{CDOi:.3f}  {CD2ui:.3f}  {CD2li:.3f}  {CLCD0i:.2f}  {RErefi:.0e}  {REexpi:.1f}" )
     print(f"Qprop propeller input file '{output_file}' created suscessfuly from {input_file} file")
 
 '''
     TEST RUNS
 '''
 
-generate_qprop_input("APC/10x45MR-PERF.PE0", "apc_prop")
+generate_qprop_input("APC/10x45MR-PERF.PE0", "apc_prop", rpm = 10000, thrust = 1)
+
