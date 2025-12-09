@@ -34,7 +34,7 @@ def read_apc_geometry(file_path, n_points=10, mode = "nonuniform", edge_factor =
         raise ValueError(f"Number of points exceeds the maximum limit of {max_limit} on propeller geometry file")
     
     headers = ["STATION", "CHORD", "PITCH_QUOTED", "PITCH_LE_TE", "PITCH_PRATHER",
-        "SWEEP", "THICKNESS_RATIO", "TWIST", "MAX_THICK", "CROSS_SECTION",
+        "SWEEP", "THICKNESS", "TWIST", "MAX_THICK", "CROSS_SECTION",
         "ZHIGH", "CGY", "CGZ"]
     
     with open(file_path) as f:
@@ -65,7 +65,7 @@ def read_apc_geometry(file_path, n_points=10, mode = "nonuniform", edge_factor =
     radius = np.array(df_subset["STATION"])
     chord = np.array(df_subset["CHORD"])
     twist = np.array(df_subset["TWIST"])
-
+    thickness_ratio = np.array(df_subset["THICKNESS"])
     ####  AIRFOIL SECTION
 
     airfoil1_line = next((line for line in lines if line.startswith(" AIRFOIL1:")), None)
@@ -78,7 +78,7 @@ def read_apc_geometry(file_path, n_points=10, mode = "nonuniform", edge_factor =
     trans1, airfoil1 = parse_airfoil_line(airfoil1_line)
     trans2, airfoil2 = parse_airfoil_line(airfoil2_line)
 
-    return radius, chord, twist, [(trans1, airfoil1), (trans2, airfoil2)]
+    return radius, chord, twist, [(trans1, airfoil1), (trans2, airfoil2)], thickness_ratio
 
 '''
     # TEST RUNS

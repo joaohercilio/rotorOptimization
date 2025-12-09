@@ -39,7 +39,7 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
         uniformly ("uniform") or non-uniformly ("nonuniform").
     """
     
-    radius, chord, twist, airfoils = read_apc_geometry(input_file, n_ctrl, mode=mode)
+    radius, chord, twist, airfoils, thickness_ratio = read_apc_geometry(input_file, n_ctrl, mode=mode)
     
     xp = np.array(radius , dtype = np.float64)
     xi = np.linspace(xp[0], xp[-1], n_interp)
@@ -49,10 +49,12 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
 
     interp_chord = PchipInterpolator(xp, yp_chord)
     interp_twist = PchipInterpolator(xp, yp_twist)
+    interp_thickRatio = PchipInterpolator(xp, thickness_ratio)
 
     yi_chord = interp_chord(xi)
     yi_twist = interp_twist(xi)
-    
+    yi_thickness_ratio = interp_thickRatio(xi)
+
     n = rpm / (2*np.pi)
     D = 2*radius[-1]/39.37
     adv_ratio  = vel / ( n * D )
@@ -85,7 +87,7 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
         gamma = np.arctan(V / Vt)
         alpha_eff = yi_twist[i] - gamma
         reynolds = 1.225 / 1.78e-5 * (yi_chord[i]/39.37) * np.sqrt(V**2 + Vt**2)
-        reynolds = max(reynolds, 10000)
+        reynolds = max(reynolds, 20000)
 
         rows.append([
             f"{ri:.2f}",
@@ -96,9 +98,9 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
             f"{reynolds:.0f}",
             f"{frac:.2f}"
         ])
-        headers = ["Radial", "Chord", "Twist", "Alpha_eff", "Gamma", "Re", "Interp"]
+        headers = ["Radius", "Chord", "Twist", "Alpha_eff", "Gamma", "Re", "Interp"]
 
-        results = xfoil.inte(frac, alpha_start=-12, alpha_end=12, alpha_step=0.5, reynolds = reynolds)
+        results = xfoil.inte(frac, yi_thickness_ratio[i], alpha_start=-8, alpha_end=8, alpha_step=0.5, reynolds = reynolds)
         data = fit_qprop_parameters(results, reynolds = reynolds, reexp=-0.5)
         CL0.append(data['CL0'])
         CL_a.append(data['CL_a'])

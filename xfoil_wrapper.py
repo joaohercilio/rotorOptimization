@@ -13,9 +13,15 @@ class XFoil:
         self.reynolds = reynolds
         self.mach = mach
         
-    def aseq(self, alpha_start, alpha_end, alpha_step):
+    def aseq(self, thickness_ratio, alpha_start, alpha_end, alpha_step):
         commands = [
             f'LOAD {self.airfoil1}',
+            'GDES',
+            'TSET',
+            f'{thickness_ratio}',
+            '',
+            'EXEC',
+            '',
             'PPAR',
             'N 160',
             '',
@@ -32,7 +38,7 @@ class XFoil:
         stdout, stderr = self._run_commands(commands)
         return self._parse_polar_file('polar.txt')
     
-    def inte(self, frac, alpha_start, alpha_end, alpha_step, reynolds):
+    def inte(self, frac, thickness_ratio, alpha_start, alpha_end, alpha_step, reynolds):
         commands = [
             'INTE',
             'F',
@@ -42,6 +48,12 @@ class XFoil:
             f'{frac}',
             'new',
             'PANE',
+            'GDES',
+            'TSET',
+            f'{thickness_ratio}',
+            '',
+            'EXEC',
+            '',
             'OPER',
             f'VISC {reynolds}',
             'PACC',
@@ -114,7 +126,7 @@ def fit_qprop_parameters(results, reynolds, reexp=-0.5):
     CD2u, _ = curve_fit(parabola, CL[mask_upper], CD[mask_upper], p0=[0.05])
     CD2l, _ = curve_fit(parabola, CL[mask_lower], CD[mask_lower], p0=[0.05])
 
-    # 4) Re and Reexp ----
+    # Re and Reexp ----
     REref = reynolds
     REexp = reexp
 
@@ -131,10 +143,9 @@ def fit_qprop_parameters(results, reynolds, reexp=-0.5):
         "REexp": REexp
     }
 
-
 '''
 xfoil = XFoil('airfoils/NACA0012', 'airfoils/NACA2412')
-results = xfoil.inte(0.5, alpha_start=-10, alpha_end=10, alpha_step=0.5, reynolds = 4e5)
+results = xfoil.inte(0.5, thickness_ratio = 0.13 ,alpha_start=-10, alpha_end=10, alpha_step=0.5, reynolds = 4e5)
 
 plt.plot(results['alpha'], results['CL'])
 plt.xlabel('Alpha')
@@ -142,7 +153,7 @@ plt.ylabel('CL')
 plt.grid()
 plt.show()
 
-data = fit_qprop_parameters(results, 2.5e5)
+data = fit_qprop_parameters(results, 4e5)
 print(
     data["CL0"],
     data["CL_a"],
@@ -153,4 +164,5 @@ print(
     data["CD2l"],
     data["CLCD0"]
 )
+
 '''
