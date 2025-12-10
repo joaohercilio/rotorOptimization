@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import PchipInterpolator
 from tabulate import tabulate
 
-def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=10, n_interp=30, mode="nonuniform"):
+def generate_qprop_input(input_file, output_file, rpm, thrust = 0, vel = 0, n_ctrl=10, n_interp=30, mode="nonuniform"):
 
     """
     Creates a QProp propeller input file by selecting points from a geometry file,
@@ -55,7 +55,7 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
     yi_twist = interp_twist(xi)
     yi_thickness_ratio = interp_thickRatio(xi)
 
-    n = rpm / (2*np.pi)
+    n = rpm / 60
     D = 2*radius[-1]/39.37
     adv_ratio  = vel / ( n * D )
     V = n * D * adv_ratio
@@ -136,12 +136,12 @@ def generate_qprop_input(input_file, output_file, rpm, thrust, vel = 0, n_ctrl=1
         f.write(header)
         for ri, ci, bi, CL0i, CL_ai, CL_mini, CL_maxi, CDOi, CD2ui, CD2li, CLCD0i, RErefi, REexpi in zip(xi, yi_chord, yi_twist, CL0, CL_a, CL_min, CL_max, CD0, CD2u, CD2l, CLCD0, REref, REexp):
             f.write(
-                f"\n {ri:.2f}  {ci:.2f}  {bi:.1f}  {CL0i:.2f}  {CL_ai:.1f}  {CL_mini:.1f}  {CL_maxi:.1f}  "
-                f"{CDOi:.3f}  {CD2ui:.3f}  {CD2li:.3f}  {CLCD0i:.2f}  {RErefi:.0e}  {REexpi:.1f}" )
+                f"\n {ri:.2f}  {ci:.2f}  {bi:.2f}  {CL0i:.2f}  {CL_ai:.2f}  {CL_mini:.2f}  {CL_maxi:.2f}  "
+                f"{CDOi:.3f}  {CD2ui:.3f}  {CD2li:.3f}  {CLCD0i:.2f}  {RErefi:.2f}  {REexpi:.2f}" )
     print(f"Qprop propeller input file '{output_file}' created suscessfuly from {input_file} file")
 '''
     TEST RUNS
 '''
 
-generate_qprop_input("APC/10x45MR-PERF.PE0", "apc_prop",vel=100, rpm = 10000, thrust = 1)
+#generate_qprop_input("APC/10x45MR-PERF.PE0", "apc_prop",vel=10, rpm = 10000, thrust = 1)
 

@@ -35,7 +35,7 @@ class XFoil:
             '',
             'QUIT'
         ]
-        stdout, stderr = self._run_commands(commands)
+        self._run_commands(commands)
         return self._parse_polar_file('polar.txt')
     
     def inte(self, frac, thickness_ratio, alpha_start, alpha_end, alpha_step, reynolds):
@@ -54,6 +54,10 @@ class XFoil:
             '',
             'EXEC',
             '',
+            'PPAR',
+            'N 160',
+            '',
+            '',
             'OPER',
             f'VISC {reynolds}',
             'PACC',
@@ -63,7 +67,8 @@ class XFoil:
             '',
             'QUIT'
         ]
-        stdout, stderr = self._run_commands(commands)
+        #print('\n'.join(commands))
+        self._run_commands(commands)
         return self._parse_polar_file('polar.txt')
 
     def _run_commands(self, commands):
@@ -71,7 +76,6 @@ class XFoil:
             input_file = os.path.join(tmpdir, 'input.in')
             with open(input_file, 'w') as f:
                 f.write('\n'.join(commands))
-                #print('\n'.join(commands))
 
             result = subprocess.run(
                 [self.xfoil_path],
@@ -80,10 +84,7 @@ class XFoil:
                 stderr=subprocess.PIPE,
                 text=True
             )
-
-            stdout, stderr = result.stdout, result.stderr
             
-            return stdout, stderr     
            
     def _parse_polar_file(self, filename):
         data = np.loadtxt(filename, skiprows=12)
@@ -162,7 +163,5 @@ print(
     data["CD0"],
     data["CD2u"],
     data["CD2l"],
-    data["CLCD0"]
-)
-
+    data["CLCD0"])
 '''
